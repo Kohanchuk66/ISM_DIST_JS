@@ -1,0 +1,31 @@
+td{
+    width: 20px;
+    height: 20px;
+    border: 1px solid blue;
+    text-align: center;
+}
+table{
+    border-collapse: collapse;
+}
+input{
+    margin: 5px;
+}
+.highlight{
+    background: aqua;
+}
+td[data-state = 'bomb']{
+    background-repeat: no-repeat;
+    background-position: center;
+    background-image: url("pictures/bomb.jpg");
+}
+td[data-state = 'close']{
+    background: linear-gradient(AliceBlue, cadetblue );
+}
+td[data-state = 'empty']{
+    background: linear-gradient(Snow, Silver );
+}
+td[data-state = 'flag']{
+    background-repeat: no-repeat;
+    background-position: center;
+    background-image: url("pictures/flag.jpg");
+}
