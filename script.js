@@ -11,9 +11,9 @@ var countOpened = 0;
 rowsElem.type='number';
 bombsElem.type='number';
 colsElem.type='number';
-rowsElem.min = 0;
-bombsElem.min = 0;
-colsElem.min = 0;
+rowsElem.min = 1;
+bombsElem.min = 1;
+colsElem.min = 1;
 generateButtonElem.type='button';
 generateButtonElem.value='game';
 document.body.appendChild(formElem);
@@ -27,107 +27,64 @@ generatedBlockElem.id='generatedBlock';
 loaddata();
 
 function win(){
+
   let tableElem = document.querySelector('#generatedBlock table');
-  tableElem.innerHTML = 'You win';
+  alert('You win');
    countOpened = 0;
-  localStorage.setItem( 'rowscount', 0 );
-  localStorage.setItem( 'columnsCount', 0 );
-  localStorage.setItem( 'bombsCount', 0 );
+
 }
 
-function openEmpties( x, y ) {
-  let tableElem = document.querySelector('#generatedBlock table');
-  var rowsCount = +rowsElem.value;
-  var columnsCount = +colsElem.value;
-  //countOpened++;
-  openCell(x+1, y);
-  openCell(x, y+1);
-  openCell(x, y-1);
-  openCell(x-1, y);
-  openCell(x-1, y-1);
-  openCell(x-1, y+1);
-  openCell(x+1, y-1);
-  openCell(x+1, y+1);
-  for ( let i=x,j=y; i < rowsCount ; i++){
-    countOpened++;
-    openCell(i+1, j);
-    if( tableElem.rows[i+1].cells[j].dataset.state == 'empty') openEmpties(i+1,j);
-    if( tableElem.rows[i+1].cells[j].dataset.state == 'open') break;
-  }
-  for ( let i=x,j=y; j < columnsCount ; j++){
-    countOpened++;
-    openCell(i, j+1);
-    if( tableElem.rows[i].cells[j+1].dataset.state == 'empty') openEmpties(i,j+1);
-    if( tableElem.rows[i].cells[j+1].dataset.state == 'open') break;
-  }
-  for ( let i=x,j=y; j >= 0; j--){
-    countOpened++;
-    openCell(i, j-1);
-    if( tableElem.rows[i].cells[j-1].dataset.state == 'empty') openEmpties(i,j-1);
-    if( tableElem.rows[i].cells[j-1].dataset.state == 'open') break;
-  }
-  for ( let i=x,j=y; i >= 0; i--){
-    countOpened++;
-    openCell(i-1, j);
-    if( tableElem.rows[i-1].cells[j].dataset.state == 'empty') openEmpties(i-1,j);
-    if( tableElem.rows[i-1].cells[j].dataset.state == 'open') break;
-  }
+function isCellExist(row, col) {
+  return row >= 0 && col >=0 && row < rowsElem.value && col < colsElem.value;
 }
 
 function openCell( x, y ) {
   let tableElem = document.querySelector('#generatedBlock table');
+  if(tableElem.rows[x].cells[y].dataset.state == 'bomb'){
+    tableElem.rows[x].cells[y].dataset.state = 'openBomb';
+    alert('lose');
+    return;
+  }
   let countBombs = 0;
-  var rowsCount = +rowsElem.value;
-  var columnsCount = +colsElem.value;
-  if ((x+1 < rowsCount) ) if(tableElem.rows[x+1].cells[y].dataset.move == 'false') countBombs++;
-  if ((y+1 < columnsCount) && (x+1 < rowsCount) && tableElem.rows[x+1].cells[y+1].dataset.move == 'false' ) countBombs++;
-  if ((y+1 < columnsCount) && tableElem.rows[x].cells[y+1].dataset.move == 'false' ) countBombs++;
-  if ((x+1 < rowsCount) && (y-1 >= 0) && tableElem.rows[x+1].cells[y-1].dataset.move == 'false' ) countBombs++;
-  if ((y+1 < columnsCount) && (x-1 >= 0) && tableElem.rows[x-1].cells[y+1].dataset.move == 'false' ) countBombs++;
-  if ((x-1 >= 0) && (y-1 >= 0) && tableElem.rows[x-1].cells[y-1].dataset.move == 'false' ) countBombs++;
-  if ( (y-1 >= 0) && tableElem.rows[x].cells[y-1].dataset.move == 'false' ) countBombs++;
-  if ((x-1 >= 0) && tableElem.rows[x-1].cells[y].dataset.move == 'false' ) countBombs++;
-  if(countBombs == 0){
-    tableElem.rows[x].cells[y].dataset.state = 'empty';
-    openEmpties(x, y);
+  for (let i = -1; i <= 1; i++){
+    for (let j = -1; j <= 1; j++){
+      if ( isCellExist(x+i, y+j) && (tableElem.rows[ x+i ].cells[ y+j ].dataset.state == 'bomb' || tableElem.rows[ x+i ].cells[ y+j ].dataset.step == 'bombFlag')){
+        countBombs++;
+      }
+    }
   }
-  else {
-    tableElem.rows[x].cells[y].dataset.state = 'open';
-    tableElem.rows[x].cells[y].innerHTML = countBombs;
 
-  }
+  tableElem.rows[x].cells[y].dataset.state = 'open';
+  tableElem.rows[x].cells[y].innerHTML = countBombs;
+  return countBombs;
 }
 
-function fillBombs( x, y ) {
-  let bombArr = [];
+function fillBombs( clickRow, clickCol) {
   let tableElem = document.querySelector('#generatedBlock table');
   let rowsCount = +rowsElem.value;
   let bombsCount = +bombsElem.value;
   let columnsCount = +colsElem.value;
-  while (bombArr.length != bombsCount){
-    let isCopy = false;
-    let bombX = Math.round(Math.random()*(columnsCount-1))  ;
-    let bombY = Math.round(Math.random()*(rowsCount-1));
-    if( bombX == x && bombY == y ){
-      continue;
+  let cellsArr = [];
+  for (let i = 0; i < rowsCount; i++){
+    for (let j = 0; j < columnsCount; j++){
+      cellsArr.push({'row' : i, 'col' : j});
     }
-    if(bombArr.length == 0){
-      bombArr[0] = [+bombX,+bombY];
-      continue;
-    }
-    for (var i = 0; i < bombArr.length; i++){
-      if( bombArr[i][0] == bombX && bombArr[i][1] == bombY ){//убрать нажатую кнопку
-        isCopy = true;
-        break;
-      }
-    }
-    if(!isCopy)
-    bombArr[i] = [+bombX,+bombY];
-
-  }console.log(bombArr);
-  for (let i = 0; i < bombArr.length; i++) {
-    tableElem.rows[bombArr[i][1] ].cells[bombArr[i][0] ].dataset.move = 'false';
   }
+  for (let i = 0; i < bombsCount; i++){
+    let randomIndex = Math.floor(Math.random() * cellsArr.length );
+    let bombRow = cellsArr[randomIndex].row;
+    let bombCol = cellsArr[randomIndex].col;
+    if(clickRow == bombRow && bombCol == clickCol ){
+      i--;
+      continue;
+    }
+    tableElem.rows[ bombRow ].cells[ bombCol ] = -1;
+    tableElem.rows[ bombRow ].cells[ bombCol ].dataset.state = 'bomb';
+    cellsArr.splice( randomIndex, 1);
+  }
+
+
+
 
 }
 
@@ -136,7 +93,7 @@ function generateTable( rowsCount, columnsCount ){
     generatedBlockElem.innerHTML = 'Too much bombs';
     localStorage.setItem( 'rowscount', rowsCount );
     localStorage.setItem( 'columnsCount', columnsCount );
-    localStorage.setItem( 'bombsCount', +bombsElem.value );
+    localStorage.setItem( 'bombsCount', bombsElem.value );
     rowsCount = 0;
     columnsCount = 0;
   }
@@ -147,9 +104,7 @@ function generateTable( rowsCount, columnsCount ){
     for(var j = 0; j < columnsCount; j++)
     {
       var tdElem = document.createElement('td');
-
       tdElem.dataset.state = 'close';
-      tdElem.dataset.move=' ';
       trElem.appendChild(tdElem);
     }
     tableElem.appendChild(trElem);
@@ -162,16 +117,39 @@ function savedata(){
   let bombsCount = +bombsElem.value;
   let columnsCount = +colsElem.value;
   let tableElem = document.querySelector('#generatedBlock table');
-  var str = '';
   let arr = [];
+  let opened = 0;
   for (let i = 0; i < rowsCount; i++){
 
     for (let j = 0; j < columnsCount; j++){
-      if(tableElem && tableElem.rows[i].cells[j].classList.contains('highlight')){
-        arr.push(1);
-      }
-      else {
-        arr.push(0);
+      if(tableElem ){
+        switch (tableElem.rows[i].cells[j].dataset.state) {
+          case 'close':
+            arr.push(0);
+            opened++;
+            break;
+          case 'bomb':
+            arr.push(1);
+            opened++;
+            break;
+          case 'empty':
+            arr.push(2);
+            opened++;
+            break;
+          case 'open':
+            opened++;
+            arr.push(5);
+            break;
+          default:
+            switch (tableElem.rows[i].cells[j].dataset.step) {
+              case 'closeFlag':
+                arr.push(3);
+                break;
+              case 'bombFlag':
+                arr.push(4);
+            }
+            break;
+        }
       }
     }
   }
@@ -179,9 +157,15 @@ function savedata(){
   localStorage.setItem( 'columnsCount', columnsCount );
   localStorage.setItem( 'bombsCount', bombsCount );
   localStorage.setItem('matrix', arr);
+  localStorage.setItem('opened', opened);
+
 }
 
 function loaddata(){
+  opened = localStorage.getItem('opened');
+  if (opened != 0){
+    firstTarget = false;
+  }
   rowsElem.value = localStorage.getItem( 'rowscount' );
   bombsElem.value = localStorage.getItem( 'bombsCount' );
   colsElem.value = localStorage.getItem( 'columnsCount' );
@@ -197,43 +181,80 @@ function loaddata(){
   for (let i = 0; i < rowsCount; i++){
 
     for (let j = 0; j < columnsCount; j++){
-      if(str[k] == '1' ){
-        tableElem.rows[i].cells[j].classList.add('highlight');
+      switch (str[k]) {
+        case '1':
+        case '3':
+          tableElem.rows[i].cells[j].dataset.state = 'bomb';
+          break;
       }
-
       k++;
     }
-
   }
+  k = 0;
+    for (let i = 0; i < rowsCount; i++){
+      for (let j = 0; j < columnsCount; j++){
+        switch (str[k]) {
+          case '2':
+            tableElem.rows[i].cells[j].dataset.state = 'empty';
+            break;
+          case '3':
+            tableElem.rows[i].cells[j].dataset.step = 'closeFlag';
+            break;
+          case '4':
+            tableElem.rows[i].cells[j].dataset.step = 'bombFlag';
+            break;
+          case '5':
+            openCell(i,j);
+            break;
+        }
+
+        k++;
+      }
+    }
 }
 
 generatedBlockElem.addEventListener('click', function (event) {
+  let tableElem = document.querySelector('#generatedBlock table');
   if( event.target.tagName == "TD" ){
-    if(firstTarget){
-      fillBombs(event.target.parentNode.rowIndex, event.target.cellIndex);
-      firstTarget = false;
-    }
-    if( event.target.dataset.move == 'false' && event.target.dataset.state == 'close' ){
-      event.target.dataset.state = 'bomb';
-      generatedBlockElem.innerHTML = 'Looser';
-    }
-    if( event.target.dataset.state == 'close' ){
+    let clickCol = event.target.cellIndex;
+    let clickRow = event.target.parentNode.rowIndex;
+    if( tableElem.rows[clickRow].cells[clickCol].dataset.state == 'close' )
       countOpened++;
-       openCell(event.target.parentNode.rowIndex, event.target.cellIndex);
-      // if(value == 0){
-      //   openEmpties(event.target.parentNode.rowIndex, event.target.cellIndex);
-      // }
-      //else {
-      //  event.target.innerHTML = value;
-     // }
-
+    if (firstTarget){
+      fillBombs(clickRow, clickCol);
     }
-    console.log(countOpened);
-    if(countOpened == rowsElem.value*colsElem.value - bombsElem.value+1){
-      win();
+    let countBombs = openCell(clickRow, clickCol);
+    if (countBombs == 0){
+      let stack = [{'row' : clickRow, 'col' : clickCol}];
+      while (stack.length > 0){
+        let cell = stack.pop();
+        let countBombs = openCell(cell.row, cell.col);
+        if( countBombs == 0)
+        {
+          for (let i = -1; i <= 1; i++){
+          for (let j = -1; j <= 1; j++){
+            if(cell.row + i == clickRow && cell.col + j == clickCol ) continue;
+            if ( isCellExist(cell.row+i, cell.col+j) && tableElem.rows[cell.row+i].cells[cell.col+j].dataset.state == 'close'){
+              let countBombs = openCell(cell.row+i, cell.col+j);
+              countOpened++;
+              stack.push({ 'row' : cell.row + i, 'col': cell.col + j });
+              tableElem.rows[cell.row+i].cells[cell.col+j].dataset.state = 'open';
+            }
+          }
+        }
+        }
+      }
     }
-    savedata();
+    firstTarget = false;
   }
+  let rowsCount = +rowsElem.value;
+  let columnsCount = +colsElem.value;
+  let bombsCount = +bombsElem.value;
+  if( countOpened == rowsCount * columnsCount - bombsCount){
+    win();
+  }
+    savedata();
+
 });
 
 generatedBlockElem.addEventListener('contextmenu', function (event) {
@@ -241,29 +262,40 @@ generatedBlockElem.addEventListener('contextmenu', function (event) {
     event.preventDefault();
     switch (event.target.dataset.state) {
       case "close":
-        event.target.dataset.state = 'flag';
+        event.target.dataset.step = 'closeFlag';
+        event.target.dataset.state = '';
         break;
-      case "flag":
-        event.target.dataset.state = 'close';
+      case "bomb":
+        event.target.dataset.step = 'bombFlag';
+        event.target.dataset.state = '';
         break;
       default:
+        switch (event.target.dataset.step) {
+          case "closeFlag":
+            event.target.dataset.state = 'close';
+            event.target.dataset.step = '';
+            break;
+          case "bombFlag":
+            event.target.dataset.state = 'bomb';
+            event.target.dataset.step = '';
+            break;
+          default:
+            break;
+        }
         break;
     }
+
   }
+  savedata();
 });
 
 generateButtonElem.addEventListener('click', function (event) {
   generatedBlockElem.innerHTML = "";
   var rowsCount = +rowsElem.value;
   var columnsCount = +colsElem.value;
+  localStorage.setItem('opened', 0);
   firstTarget = true;
   generatedBlockElem.appendChild( generateTable( rowsCount, columnsCount) );
-
-  let tdEmements = document.getElementsByTagName('td');
-  tdEmements.style.width = '20px;';
-  tdEmements.style.height = '20px;';
-  tdEmements.style.border = '1px solid blue;';
-  tdEmements.style.text_align = 'center;';
   savedata();
   event.preventDefault();
 });
